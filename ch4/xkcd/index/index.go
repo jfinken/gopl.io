@@ -40,7 +40,8 @@ func (idx *Index) Search(term string) (*bleve.SearchResult, error) {
 	// search for some text
 
 	//query := bleve.NewMatchQuery(term)
-	query := bleve.NewQueryStringQuery(term)
+	//query := bleve.NewQueryStringQuery(term)
+	query := bleve.NewFuzzyQuery(term) // Levenshtein
 	searchQuery := bleve.NewSearchRequest(query)
 
 	// Return all fields...

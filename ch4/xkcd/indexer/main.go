@@ -36,7 +36,7 @@ var data = `
 }
 */
 
-// Comic contains the data for an XKCD comic
+// Comic contains the data for an XKCD comic minus the PNGs
 type Comic struct {
 	Day        string `json:"day"`
 	Month      string `json:"month"`

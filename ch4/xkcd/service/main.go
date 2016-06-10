@@ -3,19 +3,26 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/jfinken/gopl.io/ch4/xkcd/index"
 )
 
 func main() {
+
+	if len(os.Args) <= 1 {
+		fmt.Printf("USAGE: %s search terms...\n", os.Args[0])
+		os.Exit(1)
+	}
+
 	// open or create a new index
 	index, err := index.NewIndex("xkcd.index")
 	if err != nil {
 		log.Fatalf("%s\n", err.Error())
 	}
 
-	//searchTerm := "bobby tables"
-	searchTerm := "turing"
+	searchTerm := strings.Join(os.Args[1:], " ")
 	// search!
 	result, err := index.Search(searchTerm)
 	if err != nil {
