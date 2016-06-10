@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -14,27 +16,8 @@ const (
 	xkcdURL       = "https://xkcd.com/"
 	xkcdPostfix   = "/info.0.json"
 	numGoroutines = 80
-	maxXkcd       = 1689
+	maxXkcd       = 1692 // 2016-06-10
 )
-
-/*
-curl https://xkcd.com/327/info.0.json
-var data = `
-{
-    "month": "10",
-    "num": 327,
-    "link": "",
-    "year": "2007",
-    "news": "",
-    "safe_title": "Exploits of a Mom",
-    "transcript":
-    "[[A woman is talking on the phone, holding a cup]]\nPhone: Hi, this is your son's school. We're having some computer trouble.\nMom: Oh dear\u00c3\u00a2\u00c2\u0080\u00c2\u0094did he break something?\nPhone: In a way\u00c3\u00a2\u00c2\u0080\u00c2\u0094\nPhone: Did you really name your son \"Robert'); DROP TABLE Students;--\" ?\nMom: Oh, yes. Little Bobby Tables, we call him.\nPhone: Well, we've lost this year's student records. I hope you're happy.\nMom: And I hope you've learned to sanitize your database inputs.\n{{title-text: Her daughter is named Help I'm trapped in a driver's license factory.}}",
-    "alt": "Her daughter is named Help I'm trapped in a driver's license factory.",
-    "img": "http:\/\/imgs.xkcd.com\/comics\/exploits_of_a_mom.png",
-    "title": "Exploits of a Mom",
-    "day": "10"
-}
-*/
 
 // Comic contains the data for an XKCD comic minus the PNGs
 type Comic struct {
@@ -56,33 +39,37 @@ func indexComic(index *index.Index, in chan int, syncGroup *sync.WaitGroup) {
 	defer syncGroup.Done()
 
 	// Note: for loop on a channel will break on channel close
+	// curl https://xkcd.com/327/info.0.json
 	for num := range in {
 		url := xkcdURL + strconv.Itoa(num) + xkcdPostfix
+
 		fmt.Printf("Indexing: %s\n", url)
 
-		time.Sleep(500 * time.Millisecond)
-		/*
-			resp, err := http.Get(url)
+		time.Sleep(10 * time.Millisecond)
+
+		resp, err := http.Get(url)
+
+		if err != nil {
+			fmt.Printf("%s\n", err.Error())
+			continue
+		}
+		// presume nil err obviates check here?
+		if resp != nil {
 			defer resp.Body.Close()
+		}
 
-			if err != nil {
-				fmt.Printf("%s\n", err.Error())
-				continue
-			}
-
-			// unmarshal data
-			var comic Comic
-			if err = json.NewDecoder(resp.Body).Decode(&comic); err != nil {
-				fmt.Printf("%s\n", err.Error())
-				continue
-			}
-			// index it
-			err = index.Add(strconv.Itoa(comic.Num), comic)
-			if err != nil {
-				fmt.Printf("%s\n", err.Error())
-				continue
-			}
-		*/
+		// unmarshal data
+		var comic Comic
+		if err = json.NewDecoder(resp.Body).Decode(&comic); err != nil {
+			fmt.Printf("%s\n", err.Error())
+			continue
+		}
+		// index it
+		err = index.Add(strconv.Itoa(comic.Num), comic)
+		if err != nil {
+			fmt.Printf("%s\n", err.Error())
+			continue
+		}
 	}
 }
 

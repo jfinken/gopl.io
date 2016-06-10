@@ -9,6 +9,9 @@ import (
 	"github.com/jfinken/gopl.io/ch4/xkcd/index"
 )
 
+// TODO: minor DRY
+const xkcdURL = "https://xkcd.com/"
+
 func main() {
 
 	if len(os.Args) <= 1 {
@@ -32,6 +35,7 @@ func main() {
 	//
 	for i := 0; i < len(result.Hits); i++ {
 		hit := result.Hits[i]
-		fmt.Printf("ID: %s\tScore: %f\tFields: %v\n", hit.ID, hit.Score, hit.Fields)
+		//fmt.Printf("ID: %s\tScore: %f\tFields: %v\n", hit.ID, hit.Score, hit.Fields)
+		fmt.Printf("%s%s\n", xkcdURL, hit.ID)
 	}
 }
