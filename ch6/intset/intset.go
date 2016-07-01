@@ -25,6 +25,37 @@ func (s *IntSet) Has(x int) bool {
 	return word < len(s.words) && s.words[word]&(1<<bit) != 0
 }
 
+// Len returns the number of elements in s
+func (s *IntSet) Len() int {
+	sum := 0
+	for _, word := range s.words {
+		if word == 0 {
+			continue
+		}
+		for bit := 0; bit < 64; bit++ {
+			if word&(1<<uint(bit)) != 0 {
+				sum++
+			}
+		}
+	}
+	return sum
+}
+
+// Remove removes the non-negative value x from the set.
+func (s *IntSet) Remove(x int) {
+	word, bit := x/64, uint(x%64)
+	if word >= len(s.words) {
+		return
+	}
+	// bit clear operation
+	s.words[word] &^= 1 << bit
+}
+
+// Clear removes all elements from the set.
+func (s *IntSet) Clear() {
+	s.words = nil
+}
+
 // Add adds the non-negative value x to the set.
 func (s *IntSet) Add(x int) {
 	word, bit := x/64, uint(x%64)
@@ -32,6 +63,13 @@ func (s *IntSet) Add(x int) {
 		s.words = append(s.words, 0)
 	}
 	s.words[word] |= 1 << bit
+}
+
+// Copy returns a copy of the IntSet
+func (s *IntSet) Copy() *IntSet {
+	var t IntSet
+	t.UnionWith(s)
+	return &t
 }
 
 // UnionWith sets s to the union of s and t.
@@ -43,6 +81,23 @@ func (s *IntSet) UnionWith(t *IntSet) {
 			s.words = append(s.words, tword)
 		}
 	}
+}
+
+// Elems returns a slice of the elements of s.
+func (s *IntSet) Elems() []uint64 {
+	// nearly identical to String()
+	var elems []uint64
+	for i, word := range s.words {
+		if word == 0 {
+			continue
+		}
+		for j := 0; j < 64; j++ {
+			if word&(1<<uint(j)) != 0 {
+				elems = append(elems, uint64(64*i+j))
+			}
+		}
+	}
+	return elems
 }
 
 //!-intset
