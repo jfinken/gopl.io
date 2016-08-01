@@ -49,6 +49,10 @@ func precedence(op rune) int {
 
 // ---- parser ----
 
+type parser struct {
+	env Env
+}
+
 // Parse parses the input string as an arithmetic expression.
 //
 //   expr = num                         a literal number, e.g., 3.14159
@@ -57,7 +61,7 @@ func precedence(op rune) int {
 //        | '-' expr                    a unary operator (+-)
 //        | expr '+' expr               a binary operator (+-*/)
 //
-func Parse(input string) (_ Expr, err error) {
+func (p *parser) Parse(input string) (_ Expr, err error) {
 	defer func() {
 		switch x := recover().(type) {
 		case nil:
@@ -73,27 +77,27 @@ func Parse(input string) (_ Expr, err error) {
 	lex.scan.Init(strings.NewReader(input))
 	lex.scan.Mode = scanner.ScanIdents | scanner.ScanInts | scanner.ScanFloats
 	lex.next() // initial lookahead
-	e := parseExpr(lex)
+	e := p.parseExpr(lex)
 	if lex.token != scanner.EOF {
 		return nil, fmt.Errorf("unexpected %s", lex.describe())
 	}
 	return e, nil
 }
 
-func parseExpr(lex *lexer) Expr {
-	return parseBinary(lex, 1)
+func (p *parser) parseExpr(lex *lexer) Expr {
+	return p.parseBinary(lex, 1)
 }
 
 // binary = unary ('+' binary)*
 // parseBinary stops when it encounters an
 // operator of lower precedence than prec1.
-func parseBinary(lex *lexer, prec1 int) Expr {
-	lhs := parseUnary(lex)
+func (p *parser) parseBinary(lex *lexer, prec1 int) Expr {
+	lhs := p.parseUnary(lex)
 	for prec := precedence(lex.token); prec >= prec1; prec-- {
 		for precedence(lex.token) == prec {
 			op := lex.token
 			lex.next() // consume operator
-			rhs := parseBinary(lex, prec+1)
+			rhs := p.parseBinary(lex, prec+1)
 			lhs = binary{op, lhs, rhs}
 		}
 	}
@@ -101,30 +105,34 @@ func parseBinary(lex *lexer, prec1 int) Expr {
 }
 
 // unary = '+' expr | primary
-func parseUnary(lex *lexer) Expr {
+func (p *parser) parseUnary(lex *lexer) Expr {
 	if lex.token == '+' || lex.token == '-' {
 		op := lex.token
 		lex.next() // consume '+' or '-'
-		return unary{op, parseUnary(lex)}
+		return unary{op, p.parseUnary(lex)}
 	}
-	return parsePrimary(lex)
+	return p.parsePrimary(lex)
 }
 
 // primary = id
 //         | id '(' expr ',' ... ',' expr ')'
 //         | num
 //         | '(' expr ')'
-func parsePrimary(lex *lexer) Expr {
+func (p *parser) parsePrimary(lex *lexer) Expr {
 	switch lex.token {
 	case scanner.Ident:
 		id := lex.text()
-		fmt.Printf("ident: %s\n", id)
 		lex.next() // consume Identifier
 		if lex.token != '(' {
-			// consume assignment
+			// consume Assignment
 			if lex.token == '=' {
 				lex.next()
-				fmt.Printf("value: %s\n", lex.text())
+				f, err := strconv.ParseFloat(lex.text(), 64)
+				if err != nil {
+					panic(lexPanic(err.Error()))
+				}
+				lex.next() // consume
+				return assign{ident: Var(id), value: literal(f)}
 			}
 			return Var(id)
 		}
@@ -132,7 +140,7 @@ func parsePrimary(lex *lexer) Expr {
 		var args []Expr
 		if lex.token != ')' {
 			for {
-				args = append(args, parseExpr(lex))
+				args = append(args, p.parseExpr(lex))
 				if lex.token != ',' {
 					break
 				}
@@ -156,7 +164,7 @@ func parsePrimary(lex *lexer) Expr {
 
 	case '(':
 		lex.next() // consume ')'
-		e := parseExpr(lex)
+		e := p.parseExpr(lex)
 		if lex.token != ')' {
 			msg := fmt.Sprintf("got %s, want ')'", lex.describe())
 			panic(lexPanic(msg))

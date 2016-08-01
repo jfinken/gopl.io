@@ -14,6 +14,9 @@ func (lit literal) String() string {
 func (v Var) String() string {
 	return Format(v)
 }
+func (a assign) String() string {
+	return Format(a)
+}
 func (u unary) String() string {
 	return Format(u)
 }
@@ -39,6 +42,11 @@ func write(buf *bytes.Buffer, e Expr) {
 
 	case Var:
 		fmt.Fprintf(buf, "%s", e)
+
+	case assign:
+		fmt.Fprintf(buf, "(%s=", e.ident)
+		write(buf, e.value)
+		buf.WriteByte(')')
 
 	case unary:
 		fmt.Fprintf(buf, "(%c", e.op)

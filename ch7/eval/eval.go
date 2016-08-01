@@ -26,50 +26,88 @@ type Env map[Var]float64
 
 //!+Eval1
 
-func (v Var) Eval(env Env) float64 {
+func (v Var) eval(env Env) float64 {
 	return env[v]
 }
 
-func (l literal) Eval(_ Env) float64 {
+func (l literal) eval(_ Env) float64 {
 	return float64(l)
+}
+func (a assign) eval(env Env) float64 {
+	env[a.ident] = float64(a.value)
+	return float64(a.value)
 }
 
 //!-Eval1
 
 //!+Eval2
 
-func (u unary) Eval(env Env) float64 {
+// Eval contains the parser to maintain the implicit interface satisfaction
+// by the expression types.
+type Eval struct {
+	parser parser
+}
+
+// New constructs an unexported parser object to store the Env as state.
+func New() *Eval {
+	p := parser{env: Env{}}
+	e := Eval{parser: p}
+	return &e
+}
+
+// Run executes the given string expression returning a float64 result or panic
+func (e *Eval) Run(input string) float64 {
+	// parse
+	expr, err := e.parser.Parse(input)
+	if err != nil {
+		panic(fmt.Sprintf("unsupported expression: %s. [Error: %s]",
+			input, err.Error()))
+	}
+	// evaluate the expression based on its type
+	return expr.eval(e.parser.env)
+}
+func (u unary) eval(env Env) float64 {
 	switch u.op {
 	case '+':
-		return +u.x.Eval(env)
+		return +u.x.eval(env)
 	case '-':
-		return -u.x.Eval(env)
+		return -u.x.eval(env)
 	}
 	panic(fmt.Sprintf("unsupported unary operator: %q", u.op))
 }
 
-func (b binary) Eval(env Env) float64 {
+func (b binary) eval(env Env) float64 {
 	switch b.op {
 	case '+':
-		return b.x.Eval(env) + b.y.Eval(env)
+		return b.x.eval(env) + b.y.eval(env)
 	case '-':
-		return b.x.Eval(env) - b.y.Eval(env)
+		return b.x.eval(env) - b.y.eval(env)
 	case '*':
-		return b.x.Eval(env) * b.y.Eval(env)
+		return b.x.eval(env) * b.y.eval(env)
 	case '/':
-		return b.x.Eval(env) / b.y.Eval(env)
+		return b.x.eval(env) / b.y.eval(env)
 	}
 	panic(fmt.Sprintf("unsupported binary operator: %q", b.op))
 }
 
-func (c call) Eval(env Env) float64 {
+type fn func(float64) float64
+
+func (c call) eval(env Env) float64 {
+	/*	// Map of function name to func
+		funcs := map[string]fn{
+			"sin": math.Sin,
+		}
+		return funcs[c.fn](c.args[0].eval(env))
+	*/
 	switch c.fn {
 	case "pow":
-		return math.Pow(c.args[0].Eval(env), c.args[1].Eval(env))
+		return math.Pow(c.args[0].eval(env), c.args[1].eval(env))
 	case "sin":
-		return math.Sin(c.args[0].Eval(env))
+		return math.Sin(c.args[0].eval(env))
+	case "cos":
+		return math.Cos(c.args[0].eval(env))
 	case "sqrt":
-		return math.Sqrt(c.args[0].Eval(env))
+		return math.Sqrt(c.args[0].eval(env))
 	}
 	panic(fmt.Sprintf("unsupported function call: %s", c.fn))
 }
