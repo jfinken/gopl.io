@@ -5,6 +5,7 @@ package eval
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"text/scanner"
@@ -79,7 +80,9 @@ func Parse(input string) (_ Expr, err error) {
 	return e, nil
 }
 
-func parseExpr(lex *lexer) Expr { return parseBinary(lex, 1) }
+func parseExpr(lex *lexer) Expr {
+	return parseBinary(lex, 1)
+}
 
 // binary = unary ('+' binary)*
 // parseBinary stops when it encounters an
@@ -115,8 +118,14 @@ func parsePrimary(lex *lexer) Expr {
 	switch lex.token {
 	case scanner.Ident:
 		id := lex.text()
-		lex.next() // consume Ident
+		fmt.Printf("ident: %s\n", id)
+		lex.next() // consume Identifier
 		if lex.token != '(' {
+			// consume assignment
+			if lex.token == '=' {
+				lex.next()
+				fmt.Printf("value: %s\n", lex.text())
+			}
 			return Var(id)
 		}
 		lex.next() // consume '('
@@ -157,4 +166,13 @@ func parsePrimary(lex *lexer) Expr {
 	}
 	msg := fmt.Sprintf("unexpected %s", lex.describe())
 	panic(lexPanic(msg))
+}
+
+// IsWholeNumber checks if a float is a whole number
+func IsWholeNumber(n float64) bool {
+	// citation: github.com/soudy/mathcat
+	epsilon := 1e-9
+	_, frac := math.Modf(math.Abs(n))
+
+	return frac < epsilon || frac > 1.0-epsilon
 }

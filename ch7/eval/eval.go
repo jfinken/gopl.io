@@ -11,6 +11,13 @@ import (
 	"math"
 )
 
+/*
+* TODO:
+*	- make this the main geth package.
+*	- Parse struct, Env is a field.
+* 	- implement New(), creates a Parse struct
+ */
+
 //!+env
 
 type Env map[Var]float64

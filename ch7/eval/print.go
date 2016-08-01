@@ -8,6 +8,22 @@ import (
 	"fmt"
 )
 
+func (lit literal) String() string {
+	return Format(lit)
+}
+func (v Var) String() string {
+	return Format(v)
+}
+func (u unary) String() string {
+	return Format(u)
+}
+func (b binary) String() string {
+	return Format(b)
+}
+func (c call) String() string {
+	return Format(c)
+}
+
 // Format formats an expression as a string.
 // It does not attempt to remove unnecessary parens.
 func Format(e Expr) string {
