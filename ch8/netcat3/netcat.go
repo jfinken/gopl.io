@@ -15,7 +15,7 @@ import (
 
 //!+
 func main() {
-	conn, err := net.Dial("tcp", "localhost:8000")
+	conn, err := net.Dial("tcp", "localhost:8181")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -26,7 +26,15 @@ func main() {
 		done <- struct{}{} // signal the main goroutine
 	}()
 	mustCopy(conn, os.Stdin)
-	conn.Close()
+	// type assertion to only close the write half of the connection so that
+	// the program will continue to read (and print) from the reverb1 server.
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		err := tcpConn.CloseWrite()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	//conn.Close()
 	<-done // wait for background goroutine to finish
 }
 
